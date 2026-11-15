@@ -31,16 +31,27 @@ class ExampleToggle extends QuickMenuToggle {
     constructor(extension) {
 
         super({
-            title: _('AmneziaVPN'),
+            title: _('Amnezia'),
             gicon: new Gio.FileIcon({
             file: extension.dir.resolve_relative_path(
-                'icons/inactive-dark.png'
+                'icons/default-dark.png'
             ),
             }),
             toggleMode: true,
         });    
         this.add_style_class_name('amneziawg-button');
         this.name = 'amneziawg-toggle';
+        const updateIcon = () => {
+            // Use the actual Shell theme foreground, including custom themes
+            // and the button's checked state, to select a contrasting icon.
+            const color = this.get_theme_node().get_foreground_color();
+            const brightness = 0.2126 * color.red + 0.7152 * color.green + 0.0722 * color.blue;
+            const variant = brightness > 128 ? 'dark' : 'light';
+            const file = extension.dir.resolve_relative_path(`icons/default-${variant}.png`);
+            if (!this.gicon?.file?.equal(file))
+                this.gicon = new Gio.FileIcon({file});
+        };
+        this.connect('style-changed', updateIcon);
 
         const scrollView = new St.ScrollView({
             style: 'max-height: 240px;',
@@ -63,6 +74,11 @@ class ExampleToggle extends QuickMenuToggle {
                 console.log('Выбран сервер Германии');
             });
         }
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this.menu.addAction('Настройки', () => {
+            Main.panel.statusArea.quickSettings.menu.close();
+            extension.openPreferences();
+        });
             
         // Нажатие на основную часть кнопки
         this.connect('clicked', () => {
@@ -87,9 +103,25 @@ class ExampleIndicator extends SystemIndicator {
         super();
 
         this._indicator = this._addIndicator();
-        this._indicator.iconName = 'face-smile-symbolic';
+        const settings = extension.getSettings();
+        // Set an icon before the actor receives its first style notification.
+        this._indicator.gicon = new Gio.FileIcon({file: extension.dir.resolve_relative_path(
+            `icons/${settings.get_string('icon-style')}-dark.png`)});
+        const updatePanelIcon = () => {
+            const style = settings.get_string('icon-style');
+            const type = style;
+            const color = this._indicator.get_theme_node().get_foreground_color();
+            const brightness = 0.2126 * color.red + 0.7152 * color.green + 0.0722 * color.blue;
+            const variant = brightness > 128 ? 'dark' : 'light';
+            const file = extension.dir.resolve_relative_path(`icons/${type}-${variant}.png`);
+            if (!this._indicator.gicon?.file?.equal(file))
+                this._indicator.gicon = new Gio.FileIcon({file});
+        };
+        const iconChangedId = settings.connect('changed::icon-style', updatePanelIcon);
+        this._indicator.connect('style-changed', updatePanelIcon);
+        this.connect('destroy', () => settings.disconnect(iconChangedId));
         
-        const toggle = new ExampleToggle();
+        const toggle = new ExampleToggle(extension);
         toggle.bind_property('checked',
             this._indicator, 'visible',
             GObject.BindingFlags.SYNC_CREATE);
@@ -99,7 +131,7 @@ class ExampleIndicator extends SystemIndicator {
 
 export default class QuickSettingsExampleExtension extends Extension {
     enable() {
-        this._indicator = new ExampleIndicator();
+        this._indicator = new ExampleIndicator(this);
         Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
     }
 
