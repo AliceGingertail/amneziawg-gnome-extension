@@ -1,94 +1,110 @@
-const { GObject, St, Gio, GLib } = imports.gi;
-const Main = imports.ui.main;
-const PanelMenu = imports.ui.panelMenu;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Util = imports.misc.util;
-const { GsettingsManager } = Me.imports.gsettingsManager;
+/* extension.js
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
 
-class ToggleAWG {
-    constructor(gsettingsManager) {
-        this._isActive = false;
-        this.gsettingsManager = gsettingsManager;
-    }
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-    _getIconPath(isActive) {
-        const manualTheme = this.gsettingsManager.getValue('manual-theme');
-        const iconType = manualTheme === 'dark' ? 'dark' : 'light';
-        return `${Me.path}/icons/${isActive ? 'active-' : 'inactive-'}${iconType}.png`;
-    }
+import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
-    toggleService() {
-        const iface = this.gsettingsManager.getValue('interface');
-        if (!iface) {
-            Main.notify('Toggle AWG', 'No interface set in settings!');
-            return;
-        }
+import St from 'gi://St';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-        const action = this._isActive ? 'stop' : 'start';
-        const command = ['sudo', 'systemctl', action, `awg-quick@${iface}`];
+const ExampleToggle = GObject.registerClass(
+class ExampleToggle extends QuickMenuToggle {
+    constructor(extension) {
 
-        Util.spawn(command);
-        this._isActive = !this._isActive;
-    }
-}
+        super({
+            title: _('AmneziaVPN'),
+            gicon: new Gio.FileIcon({
+            file: extension.dir.resolve_relative_path(
+                'icons/inactive-dark.png'
+            ),
+            }),
+            toggleMode: true,
+        });    
+        this.add_style_class_name('amneziawg-button');
+        this.name = 'amneziawg-toggle';
 
-var ToggleAWGButton = GObject.registerClass(
-    class ToggleAWGButton extends PanelMenu.Button {
-        _init(toggleAWG, gsettingsManager) {
-            super._init(0.0, 'Toggle AWG Button');
-            this.toggleAWG = toggleAWG;
-            this.gsettingsManager = gsettingsManager;
+        const scrollView = new St.ScrollView({
+            style: 'max-height: 240px;',
+            hscrollbar_policy: St.PolicyType.NEVER,
+            vscrollbar_policy: St.PolicyType.AUTOMATIC,
+        });
 
-            this._icon = this._createIcon(false);
-            this.add_child(this._icon);
+        // Контейнер для пунктов списка
+        const serversSection = new PopupMenu.PopupMenuSection();
 
-            this.connect('button-press-event', () => {
-                this.toggleAWG.toggleService();
-                this._updateIcon();
+        scrollView.set_child(serversSection.actor);
+        this.menu.box.add_child(scrollView);
+
+
+        for (let i = 0; i < 10; i++) {
+            const serverName = `Германия ${i}`;
+            // Пункты меню и действия при их выборе
+            serversSection.addAction(serverName, () => {
+                this.subtitle = serverName;
+                console.log('Выбран сервер Германии');
             });
-
-            this.gsettingsManager.settings.connect('changed', () => this._updateIcon());
         }
+            
+        // Нажатие на основную часть кнопки
+        this.connect('clicked', () => {
+            console.log('Состояние кнопки:', this.checked);
+        });
+        
+        this.connect('clicked', () => {
+            console.log('Клик! Включено:', this.checked);
 
-        _createIcon(isActive) {
-            return new St.Icon({
-                gicon: Gio.icon_new_for_string(this.toggleAWG._getIconPath(isActive)),
-                icon_size: this.gsettingsManager.getValue('icon-size'),
-                style_class: 'system-status-icon',
-            });
-        }
-
-        _updateIcon() {
-            const isActive = this.toggleAWG._isActive;
-            this._icon.gicon = Gio.icon_new_for_string(this.toggleAWG._getIconPath(isActive));
-            this._icon.icon_size = this.gsettingsManager.getValue('icon-size');
-        }
+            if (this.checked) {
+                // Подключить VPN
+            } else {
+                    // Отключить VPN
+            }
+        });
     }
-);
+});
 
-class Extension {
-    constructor() {}
+const ExampleIndicator = GObject.registerClass(
+class ExampleIndicator extends SystemIndicator {
+    constructor(extension) {
+        super();
 
+        this._indicator = this._addIndicator();
+        this._indicator.iconName = 'face-smile-symbolic';
+        
+        const toggle = new ExampleToggle();
+        toggle.bind_property('checked',
+            this._indicator, 'visible',
+            GObject.BindingFlags.SYNC_CREATE);
+        this.quickSettingsItems.push(toggle);
+    }
+});
+
+export default class QuickSettingsExampleExtension extends Extension {
     enable() {
-        this._button = null;
-        this._gsettingsManager = new GsettingsManager();
-        const toggleAWG = new ToggleAWG(this._gsettingsManager);
-        this._button = new ToggleAWGButton(toggleAWG, this._gsettingsManager);
-        Main.panel.addToStatusArea('toggle-awg-button', this._button);
+        this._indicator = new ExampleIndicator();
+        Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
     }
 
     disable() {
-        if (this._button) {
-            this._button.destroy();
-            this._button = null;
-        }
-        if (this._gsettingsManager) {
-            this._gsettingsManager = null;
-        }
+        this._indicator.quickSettingsItems.forEach(item => item.destroy());
+        this._indicator.destroy();
     }
-}
-
-function init() {
-    return new Extension();
 }

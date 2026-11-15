@@ -1,10 +1,8 @@
 {
-    "uuid": "amneziawg@amnezia-vpn",
-    "name": "AmneziaWG Toggle Button",
-    "description": "A button to toggle AmneziaWG service on/off",
-    "shell-version": ["40", "41", "42", "43", "44"],
-    "url": "https://github.com/amnezia-vpn/amneziawg-gnome-extension",
-    "settings-schema": "org.gnome.shell.extensions.amneziawg",
-    "version": 4,
-    "version-name": "1.4.0"
+  "name": "AmneziaExtension",
+  "description": "Amnezia interface control extension",
+  "uuid": "amnezia@example.com",
+  "shell-version": [
+    "50"
+  ]
 }
