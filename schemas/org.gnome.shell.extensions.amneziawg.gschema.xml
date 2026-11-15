@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <!-- GSettings declares types, defaults, and allowed values here. This schema
+       ID must match settings-schema in metadata.json. The path is a settings
+       namespace, not a filesystem directory. Recompile after editing this XML:
+       glib-compile-schemas schemas/ -->
+  <schema id="org.gnome.shell.extensions.amneziawg" path="/org/gnome/shell/extensions/amneziawg/">
+    <!-- type="s" means string. The application expands ~/ before file access;
+         GSettings itself stores the text literally and does not expand paths. -->
+    <key name="config-path" type="s">
+      <default>'~/.config/AmneziaVPN.ORG/AmneziaVPN.conf'</default>
+      <summary>AmneziaVPN configuration file</summary>
+    </key>
+    <!-- Persist the selected server across sessions without copying its secrets. -->
+    <key name="selected-server-id" type="s">
+      <default>''</default>
+      <summary>Selected server identity from the client configuration</summary>
+    </key>
+    <!-- Empty string represents the Automatic option; other values are device
+         names. This is currently saved for future monitoring functionality. -->
+    <key name="network-interface" type="s">
+      <default>''</default>
+      <summary>Network interface to monitor; empty means automatic</summary>
+    </key>
+    <!-- Only the panel icon's color style is user-selectable. Theme brightness
+         is determined at runtime; it is not encoded in this preference. -->
+    <key name="icon-style" type="s">
+      <choices><choice value="default"/><choice value="color"/></choices>
+      <default>'default'</default>
+      <summary>Top panel icon type; brightness follows the Shell theme</summary>
+    </key>
+  </schema>
+</schemalist>

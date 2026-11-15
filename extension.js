@@ -26,6 +26,7 @@ import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/q
 
 import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import {ServerStore} from './serverStore.js';
 
 const ExampleToggle = GObject.registerClass(
 class ExampleToggle extends QuickMenuToggle {
@@ -75,17 +76,43 @@ class ExampleToggle extends QuickMenuToggle {
         this.menu.box.add_child(scrollView);
 
 
-        // Temporary demo data. `let` allows the loop counter to change.
-        // Each iteration creates its own serverName, captured by its callback.
-        // No Amnezia configuration is read by this code yet.
-        for (let i = 0; i < 10; i++) {
-            const serverName = `Германия ${i}`;
-            // addAction creates a menu item and runs this callback on selection.
-            serversSection.addAction(serverName, () => {
-                this.subtitle = serverName;
-                console.log('Выбран сервер Германии');
-            });
-        }
+        const settings = extension.getSettings();
+        let currentServers = [];
+        const updateSelection = () => {
+            const selected = settings.get_string('selected-server-id');
+            this.subtitle = currentServers.find(server => server.id === selected)?.name ?? null;
+            // A dot marks the saved selection. Saving an ID instead of an index
+            // keeps the selection when the client changes the order of servers.
+            for (const item of serversSection._getMenuItems()) {
+                item.setOrnament(item._serverId === selected
+                    ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.NONE);
+            }
+        };
+        const store = new ServerStore(settings, ({servers, message}) => {
+            currentServers = servers;
+            serversSection.removeAll();
+            if (message) {
+                serversSection.addMenuItem(new PopupMenu.PopupMenuItem(message, {reactive: false}));
+            } else {
+                for (const server of servers) {
+                    const item = serversSection.addAction(server.name, () => {
+                        settings.set_string('selected-server-id', server.id);
+                    });
+                    item._serverId = server.id;
+                }
+            }
+            updateSelection();
+        });
+        const selectionChangedId = settings.connect('changed::selected-server-id', updateSelection);
+        // A manual reopen retries loading if the file was missing at startup.
+        this.menu.connect('open-state-changed', (_menu, open) => {
+            if (open)
+                store.reload();
+        });
+        this.connect('destroy', () => {
+            store.destroy();
+            settings.disconnect(selectionChangedId);
+        });
 
         // Keep preferences outside the scrolling list so they remain accessible
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
