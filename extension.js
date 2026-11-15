@@ -15,6 +15,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
+
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 
@@ -29,7 +30,6 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 const ExampleToggle = GObject.registerClass(
 class ExampleToggle extends QuickMenuToggle {
     constructor(extension) {
-
         super({
             title: _('Amnezia'),
             gicon: new Gio.FileIcon({
@@ -39,48 +39,61 @@ class ExampleToggle extends QuickMenuToggle {
             }),
             toggleMode: true,
         });    
+        // A CSS class can style multiple actors a name can target this actor.
         this.add_style_class_name('amneziawg-button');
         this.name = 'amneziawg-toggle';
+
         const updateIcon = () => {
-            // Use the actual Shell theme foreground, including custom themes
-            // and the button's checked state, to select a contrasting icon.
             const color = this.get_theme_node().get_foreground_color();
+            // Weighted RGB brightness approximates how bright the text looks
+            // The files are named for the BACKGROUND: default-dark.png contains
+            // a pale logo for dark backgrounds, default-light.png a dark logo
             const brightness = 0.2126 * color.red + 0.7152 * color.green + 0.0722 * color.blue;
             const variant = brightness > 128 ? 'dark' : 'light';
             const file = extension.dir.resolve_relative_path(`icons/default-${variant}.png`);
+
+            // changed icon avoids unnecessary work and repeated style updates.
             if (!this.gicon?.file?.equal(file))
                 this.gicon = new Gio.FileIcon({file});
         };
+        // Signals gnome events
         this.connect('style-changed', updateIcon);
 
+        // Constrain the server list so a long list does not fill the screen.
+        // These constructor options use the native widgets property names.
         const scrollView = new St.ScrollView({
             style: 'max-height: 240px;',
             hscrollbar_policy: St.PolicyType.NEVER,
             vscrollbar_policy: St.PolicyType.AUTOMATIC,
         });
 
-        // Контейнер для пунктов списка
+        // A menu section manages clickable items its actor is the visual part
+        // placed inside the scrolling container, then inside the toggles menu
         const serversSection = new PopupMenu.PopupMenuSection();
 
         scrollView.set_child(serversSection.actor);
         this.menu.box.add_child(scrollView);
 
 
+        // Temporary demo data. `let` allows the loop counter to change.
+        // Each iteration creates its own serverName, captured by its callback.
+        // No Amnezia configuration is read by this code yet.
         for (let i = 0; i < 10; i++) {
             const serverName = `Германия ${i}`;
-            // Пункты меню и действия при их выборе
+            // addAction creates a menu item and runs this callback on selection.
             serversSection.addAction(serverName, () => {
                 this.subtitle = serverName;
                 console.log('Выбран сервер Германии');
             });
         }
+
+        // Keep preferences outside the scrolling list so they remain accessible
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addAction('Настройки', () => {
             Main.panel.statusArea.quickSettings.menu.close();
             extension.openPreferences();
         });
             
-        // Нажатие на основную часть кнопки
         this.connect('clicked', () => {
             console.log('Состояние кнопки:', this.checked);
         });
@@ -89,9 +102,9 @@ class ExampleToggle extends QuickMenuToggle {
             console.log('Клик! Включено:', this.checked);
 
             if (this.checked) {
-                // Подключить VPN
+                // TODO: request a real VPN connection here.
             } else {
-                    // Отключить VPN
+                    // TODO: request a real VPN disconnection here.
             }
         });
     }
@@ -103,10 +116,16 @@ class ExampleIndicator extends SystemIndicator {
         super();
 
         this._indicator = this._addIndicator();
+        // getSettings loads the schema named by metadata.json. The preferences
         const settings = extension.getSettings();
+
         // Set an icon before the actor receives its first style notification.
         this._indicator.gicon = new Gio.FileIcon({file: extension.dir.resolve_relative_path(
-            `icons/${settings.get_string('icon-style')}-dark.png`)});
+            `icons/${settings.get_string('icon-style')}-dark.png`)
+        });
+        
+        // The panel and menu can have different background colors. Measure this
+        // icon own foreground rather than copying the menu button's icon
         const updatePanelIcon = () => {
             const style = settings.get_string('icon-style');
             const type = style;
@@ -117,14 +136,22 @@ class ExampleIndicator extends SystemIndicator {
             if (!this._indicator.gicon?.file?.equal(file))
                 this._indicator.gicon = new Gio.FileIcon({file});
         };
+
+        // changed::icon-style listens to only this settings key. connect returns
+        // an ID needed to disconnect later: settings can outlive this actor.
         const iconChangedId = settings.connect('changed::icon-style', updatePanelIcon);
         this._indicator.connect('style-changed', updatePanelIcon);
         this.connect('destroy', () => settings.disconnect(iconChangedId));
         
         const toggle = new ExampleToggle(extension);
+        // A one-way binding copies checked -> visible whenever checked changes.
+        // SYNC_CREATE also copies the current value immediately. Consequently,
+        // the panel icon is hidden while the demo toggle is off.
         toggle.bind_property('checked',
             this._indicator, 'visible',
             GObject.BindingFlags.SYNC_CREATE);
+        
+        // Register the button as one of this indicator's Quick Settings items.
         this.quickSettingsItems.push(toggle);
     }
 });
