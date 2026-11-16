@@ -24,6 +24,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
+import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {ServerStore} from './serverStore.js';
@@ -70,13 +71,18 @@ class AmneziaToggle extends QuickMenuToggle {
         const statusItem = new PopupMenu.PopupMenuItem('Проверка VPN…', {reactive: false});
         this.menu.addMenuItem(statusItem, 0);
         const updateSelection = () => {
+
             const selected = settings.get_string('selected-server-id');
             const selectedName = currentServers.find(server => server.id === selected)?.name;
+
             this.checked = vpnState.connected;
             this.subtitle = vpnState.message || (vpnState.connected
                 ? vpnState.activeServerName ?? 'VPN подключён' : selectedName ?? 'Выберите сервер');
+            
             statusItem.label.text = vpnState.message || (vpnState.connected
                 ? `Подключено: ${vpnState.activeServerName ?? 'сервер не определён'}` : 'VPN отключён');
+            
+            
             for (const item of serversSection._getMenuItems()) {
                 item.setOrnament(item._serverId === selected
                     ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.NONE);
@@ -93,7 +99,17 @@ class AmneziaToggle extends QuickMenuToggle {
                     const item = serversSection.addAction(server.name, () => {
                         settings.set_string('selected-server-id', server.id);
                     });
+
+                    const address = new St.Label({
+                        text: server.hostName ? ` (${server.hostName})` : '',
+                        style_class: 'server-address',
+                        x_expand: true,
+                        x_align: Clutter.ActorAlign.END,
+                        y_align: Clutter.ActorAlign.CENTER,
+                    });
+
                     item._serverId = server.id;
+                    item.add_child(address);
                 }
             }
 

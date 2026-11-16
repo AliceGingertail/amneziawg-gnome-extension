@@ -65,17 +65,22 @@ export class ServerStore {
         this._file.load_contents_async(cancellable, (file, result) => {
             try {
                 const [, bytes] = file.load_contents_finish(result);
-                
+
                 if (this._destroyed || cancellable.is_cancelled())
                     return;
 
                 const text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
                 const records = parseServers(text);
                 this._records = this._index(records);
+                
                 const servers = [...this._records].map(([id, server]) => {
                     const name = typeof server.description === 'string' && server.description.trim()
                         ? server.description.trim() : 'Сервер без названия';
-                    return {id, name};
+                    
+                    const hostName = typeof server.hostName === 'string' && server.hostName.trim()
+                        ? server.hostName.trim() : 'Сервер без IP'; // Change to engl
+                    
+                    return {id, name, hostName};
                 });
 
                 this._onUpdate({ servers, message: servers.length ? '' : 'Нет серверов' });
