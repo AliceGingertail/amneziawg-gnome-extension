@@ -30,6 +30,7 @@ import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {ServerStore} from './serverStore.js';
 import {VpnController} from './vpnController.js';
+import {ButtonActivation} from './buttonActivation.js';
 
 function updateIconForTheme(actor, extension, style) {
     const color = actor.get_theme_node().get_foreground_color();
@@ -131,6 +132,7 @@ class AmneziaToggle extends QuickMenuToggle {
                 store.reload();
         });
         this.connect('destroy', () => {
+            activation.destroy();
             controller.destroy();
             store.destroy();
             settings.disconnect(selectionChangedId);
@@ -142,7 +144,8 @@ class AmneziaToggle extends QuickMenuToggle {
             extension.openPreferences();
         });
 
-        this.connect('clicked', () => controller.toggle());
+        const activation = new ButtonActivation(this, options => controller.toggle(options));
+        controller.setButtonActivator(isCurrent => activation.click(isCurrent));
     }
 });
 
@@ -178,10 +181,24 @@ export default class AmneziaExtension extends Extension {
     enable() {
         this._indicator = new AmneziaIndicator(this);
         Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
+        const updateVisibility = () => {
+            const visible = !Main.sessionMode.isLocked;
+            this._indicator.visible = visible;
+            for (const item of this._indicator.quickSettingsItems)
+                item.visible = visible;
+        };
+        this._sessionModeId = Main.sessionMode.connect('updated', updateVisibility);
+        updateVisibility();
+        console.log('[AmneziaWG] extension enabled; sleep recovery can run while locked');
     }
 
     disable() {
+        // unlock-dialog keeps sleep detection alive while locked; disable still
+        // releases all subscriptions and widgets when the extension is unloaded.
+        console.log('[AmneziaWG] extension disabled; removing sleep subscriptions');
+        Main.sessionMode.disconnect(this._sessionModeId);
         this._indicator.quickSettingsItems.forEach(item => item.destroy());
         this._indicator.destroy();
+        this._indicator = null;
     }
 }

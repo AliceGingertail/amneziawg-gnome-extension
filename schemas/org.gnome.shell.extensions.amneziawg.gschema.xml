@@ -16,6 +16,12 @@
       <default>''</default>
       <summary>Selected server identity from the client configuration</summary>
     </key>
+    <!-- Recovery is experimental and does not provide persistent leak protection. -->
+    <key name="experimental-resume-reconnect" type="b">
+      <default>false</default>
+      <summary>Experimental VPN reconnection after suspend</summary>
+      <description>Reconnect the previously active server after wake. This does not prevent IP or DNS leaks during reconnection.</description>
+    </key>
     <!-- Empty string represents the Automatic option; other values are device
          names. This is currently saved for future monitoring functionality. -->
     <key name="network-interface" type="s">

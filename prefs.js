@@ -106,6 +106,14 @@ export default class AmneziaPreferences extends ExtensionPreferences {
         interfaces.add_suffix(refresh);
         refresh.connect('clicked', reloadInterfaces);
 
+        const experimental = new Adw.PreferencesGroup({title: _('Experimental'),
+            description: _('Test features. Reconnection does not provide leak protection.')});
+        page.add(experimental);
+        const resume = new Adw.SwitchRow({title: _('Reconnect after suspend (experimental)'),
+            subtitle: _('Reconnect the previously active server after wake. IP and DNS traffic may bypass the VPN while reconnecting.')});
+        settings.bind('experimental-resume-reconnect', resume, 'active', Gio.SettingsBindFlags.DEFAULT);
+        experimental.add(resume);
+
         const appearance = new Adw.PreferencesGroup({title: _('Appearance'),
             description: _('Light or dark icons are selected automatically based on the Shell theme.')});
         page.add(appearance);

@@ -35,7 +35,7 @@ export class AmneziaService {
         this._lastStatus = GLib.get_monotonic_time();
         this._timer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this._pollMs, () => {
             if (GLib.get_monotonic_time() - this._lastStatus > Math.max(this._pollMs * 3, 3000) * 1000) {
-                this._fail(_("The Amnezia service is not responding"));
+                this._fail(_('The Amnezia service is not responding'));
                 return GLib.SOURCE_REMOVE;
             }
             if (this._connection)
@@ -56,14 +56,14 @@ export class AmneziaService {
                     this._read(generation);
                 } catch {
                     if (generation === this._generation && !this._destroyed)
-                        this._fail(_("The Amnezia service is unavailable"));
+                        this._fail(_('The Amnezia service is unavailable'));
                 }
             });
     }
 
     _send(message) {
         if (!this._connection)
-            throw new Error(_("Not connected to the Amnezia service"));
+            throw new Error(_('Not connected to the Amnezia service'));
         this._queue.push(message);
         this._write();
     }
@@ -84,7 +84,7 @@ export class AmneziaService {
                     this._write();
                 } catch {
                     if (generation === this._generation && !this._destroyed)
-                        this._fail(_("Failed to send a command to the Amnezia service"));
+                        this._fail(_('Failed to send a command to the Amnezia service'));
                 }
             });
     }
@@ -97,13 +97,13 @@ export class AmneziaService {
                     if (generation !== this._generation || this._destroyed)
                         return;
                     if (!bytes?.length)
-                        throw new Error(_("The service connection was closed"));
+                        throw new Error(_('The service connection was closed'));
                     const buffer = new Uint8Array(this._buffer.length + bytes.length);
                     buffer.set(this._buffer);
                     buffer.set(bytes, this._buffer.length);
                     this._buffer = buffer;
                     if (buffer.length > 65536)
-                        throw new Error(_("The service response is too large"));
+                        throw new Error(_('The service response is too large'));
                     let newline;
                     while ((newline = this._buffer.indexOf(10)) !== -1) {
                         let message;
@@ -111,7 +111,7 @@ export class AmneziaService {
                             message = JSON.parse(new TextDecoder('utf-8', {fatal: true})
                                 .decode(this._buffer.slice(0, newline)));
                         } catch {
-                            throw new Error(_("Invalid service response"));
+                            throw new Error(_('Invalid service response'));
                         }
                         this._buffer = this._buffer.slice(newline + 1);
                         this._handle(message);
@@ -119,7 +119,7 @@ export class AmneziaService {
                     this._read(generation);
                 } catch {
                     if (generation === this._generation && !this._destroyed)
-                        this._fail(_("Failed to read the Amnezia service status"));
+                        this._fail(_('Failed to read the Amnezia service status'));
                 }
             });
     }
@@ -127,50 +127,62 @@ export class AmneziaService {
     _handle(message) {
         if (message?.type === 'status') {
             if (typeof message.connected !== 'boolean')
-                throw new Error(_("Invalid service status"));
+                throw new Error(_('Invalid service status'));
             this._lastStatus = GLib.get_monotonic_time();
             this.status = {
                 connected: message.connected,
                 gateway: typeof message.serverIpv4Gateway === 'string' ? message.serverIpv4Gateway : '',
                 address: typeof message.deviceIpv4Address === 'string' ? message.deviceIpv4Address : '',
             };
+            if (this._pending && this._pending.lastConnected !== message.connected) {
+                this._pending.lastConnected = message.connected;
+                console.log(`[AmneziaWG] pending ${this._pending.type}: service status connected=${message.connected}`);
+            }
             if (this._pending?.type === 'deactivate' && !message.connected)
                 this._settle();
             this._onUpdate({available: true, ...this.status});
         } else if (message?.type === 'connected') {
-            if (this._pending?.type === 'activate' && message.pubkey === this._pending.publicKey)
+            const matches = this._pending?.type === 'activate' && message.pubkey === this._pending.publicKey;
+            console.log(`[AmneziaWG] connected event: matches pending activation=${Boolean(matches)}`);
+            if (matches)
                 this._settle();
             this._send({type: 'status'});
         } else if (message?.type === 'disconnected') {
+            console.log(`[AmneziaWG] disconnected event: pending=${this._pending?.type ?? 'none'}`);
             if (this._pending?.type === 'deactivate')
                 this._settle();
             else if (this._pending)
-                this._settle(new Error(_("The service failed to connect the VPN")));
+                this._settle(new Error(_('The service failed to connect the VPN')));
             this.status = {connected: false, gateway: '', address: ''};
             this._onUpdate({available: true, ...this.status});
         } else if (message?.type === 'backendFailure') {
-            this._settle(new Error(_("The service reported a VPN error")));
-            this._onUpdate({available: true, ...this.status, error: _("VPN error in the Amnezia service")});
+            this._settle(new Error(_('The service reported a VPN error')));
+            this._onUpdate({available: true, ...this.status, error: _('VPN error in the Amnezia service')});
             this._send({type: 'status'});
         }
     }
 
     command(payload) {
         if (!this._connection || !this.status)
-            return Promise.reject(new Error(_("The service status is not yet known")));
+            return Promise.reject(new Error(_('The service status is not yet known')));
         if (this._pending)
-            return Promise.reject(new Error(_("Wait for the previous command to finish")));
+            return Promise.reject(new Error(_('Wait for the previous command to finish')));
         if (!['activate', 'deactivate'].includes(payload.type))
-            return Promise.reject(new Error(_("Unknown VPN command")));
+            return Promise.reject(new Error(_('Unknown VPN command')));
         return new Promise((resolve, reject) => {
             const timer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this._commandTimeoutMs, () => {
                 if (this._pending)
                     this._pending.timer = 0;
-                this._settle(new Error(_("The service did not confirm the VPN connection or disconnection")));
+                console.log(`[AmneziaWG] ${payload.type} confirmation timed out; service status connected=${this.status?.connected ?? 'unknown'}`);
+                const message = payload.type === 'activate'
+                    ? _('The Amnezia service did not confirm VPN connection: no matching handshake event')
+                    : _('The Amnezia service did not confirm VPN disconnection');
+                this._settle(new Error(message));
                 this._send({type: 'status'});
                 return GLib.SOURCE_REMOVE;
             });
             this._pending = {type: payload.type, publicKey: payload.serverPublicKey, resolve, reject, timer};
+            console.log(`[AmneziaWG] sending VPN command: ${payload.type}`);
             this._send(payload);
         });
     }
@@ -202,7 +214,7 @@ export class AmneziaService {
         if (this._timer)
             GLib.Source.remove(this._timer);
         this._timer = 0;
-        this._settle(new Error(_("Connection to the Amnezia service was lost")));
+        this._settle(new Error(_('Connection to the Amnezia service was lost')));
     }
 
     _fail(error) {
@@ -253,7 +265,7 @@ export function getServiceStatus({socketPath = null, timeoutMs = 3000} = {}) {
         };
         timer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, timeoutMs, () => {
             timer = 0;
-            finish(new Error(_("The Amnezia service response timed out")));
+            finish(new Error(_('The Amnezia service response timed out')));
             return GLib.SOURCE_REMOVE;
         });
         client.connect_async(Gio.UnixSocketAddress.new(path), cancellable, (source, result) => {
@@ -274,13 +286,13 @@ export function getServiceStatus({socketPath = null, timeoutMs = 3000} = {}) {
                             if (settled)
                                 return;
                             if (!bytes?.length)
-                                throw new Error(_("The Amnezia service closed the connection"));
+                                throw new Error(_('The Amnezia service closed the connection'));
                             const combined = new Uint8Array(buffer.length + bytes.length);
                             combined.set(buffer);
                             combined.set(bytes, buffer.length);
                             buffer = combined;
                             if (buffer.length > 65536)
-                                throw new Error(_("The Amnezia service response is too large"));
+                                throw new Error(_('The Amnezia service response is too large'));
                             let newline;
                             while ((newline = buffer.indexOf(10)) !== -1) {
                                 let message;
@@ -288,13 +300,13 @@ export function getServiceStatus({socketPath = null, timeoutMs = 3000} = {}) {
                                     message = JSON.parse(new TextDecoder('utf-8', {fatal: true})
                                         .decode(buffer.slice(0, newline)));
                                 } catch {
-                                    throw new Error(_("Invalid response from the Amnezia service"));
+                                    throw new Error(_('Invalid response from the Amnezia service'));
                                 }
                                 buffer = buffer.slice(newline + 1);
                                 if (message?.type !== 'status')
                                     continue;
                                 if (typeof message.connected !== 'boolean')
-                                    throw new Error(_("The service response is missing the VPN status"));
+                                    throw new Error(_('The service response is missing the VPN status'));
                                 finish(null, {
                                     connected: message.connected,
                                     txBytes: Number.isFinite(message.txBytes) ? message.txBytes : 0,
@@ -315,11 +327,11 @@ export function getServiceStatus({socketPath = null, timeoutMs = 3000} = {}) {
                             if (!settled)
                                 read();
                         } catch {
-                            finish(new Error(_("Failed to send a request to the Amnezia service")));
+                            finish(new Error(_('Failed to send a request to the Amnezia service')));
                         }
                     });
             } catch {
-                finish(new Error(_("Failed to connect to the Amnezia service")));
+                finish(new Error(_('Failed to connect to the Amnezia service')));
             }
         });
     });

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: amneziawg 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-16 23:54+0300\n"
+"POT-Creation-Date: 2026-11-16 23:32+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -21,7 +21,7 @@ msgstr ""
 msgid "The Amnezia service is not responding"
 msgstr ""
 
-#: amneziaService.js:59 vpnController.js:76
+#: amneziaService.js:59 vpnController.js:151
 msgid "The Amnezia service is unavailable"
 msgstr ""
 
@@ -53,96 +53,102 @@ msgstr ""
 msgid "Invalid service status"
 msgstr ""
 
-#: amneziaService.js:148
+#: amneziaService.js:155
 msgid "The service failed to connect the VPN"
 msgstr ""
 
-#: amneziaService.js:152
+#: amneziaService.js:159
 msgid "The service reported a VPN error"
 msgstr ""
 
-#: amneziaService.js:153
+#: amneziaService.js:160
 msgid "VPN error in the Amnezia service"
 msgstr ""
 
-#: amneziaService.js:160
+#: amneziaService.js:167
 msgid "The service status is not yet known"
 msgstr ""
 
-#: amneziaService.js:162
+#: amneziaService.js:169
 msgid "Wait for the previous command to finish"
 msgstr ""
 
-#: amneziaService.js:164
+#: amneziaService.js:171
 msgid "Unknown VPN command"
 msgstr ""
 
-#: amneziaService.js:169
-msgid "The service did not confirm the VPN connection or disconnection"
+#: amneziaService.js:178
+msgid ""
+"The Amnezia service did not confirm VPN connection: no matching handshake "
+"event"
 msgstr ""
 
-#: amneziaService.js:205
+#: amneziaService.js:179
+msgid "The Amnezia service did not confirm VPN disconnection"
+msgstr ""
+
+#: amneziaService.js:217
 msgid "Connection to the Amnezia service was lost"
 msgstr ""
 
-#: amneziaService.js:256
+#: amneziaService.js:268
 msgid "The Amnezia service response timed out"
 msgstr ""
 
-#: amneziaService.js:277
+#: amneziaService.js:289
 msgid "The Amnezia service closed the connection"
 msgstr ""
 
-#: amneziaService.js:283
+#: amneziaService.js:295
 msgid "The Amnezia service response is too large"
 msgstr ""
 
-#: amneziaService.js:291
+#: amneziaService.js:303
 msgid "Invalid response from the Amnezia service"
 msgstr ""
 
-#: amneziaService.js:297
+#: amneziaService.js:309
 msgid "The service response is missing the VPN status"
 msgstr ""
 
-#: amneziaService.js:318
+#: amneziaService.js:330
 msgid "Failed to send a request to the Amnezia service"
 msgstr ""
 
-#: amneziaService.js:322
+#: amneziaService.js:334
 msgid "Failed to connect to the Amnezia service"
 msgstr ""
 
-#: extension.js:47
+#: extension.js:48
 msgid "Amnezia"
 msgstr ""
 
-#: extension.js:71 extension.js:72
+#: extension.js:72 extension.js:73
 msgid "Checking VPN…"
 msgstr ""
 
-#: extension.js:81
+#: extension.js:82
 msgid "VPN connected"
 msgstr ""
 
-#: extension.js:81
+#: extension.js:82
 msgid "Select a server"
 msgstr ""
 
-#: extension.js:84
+#: extension.js:85
 #, javascript-format
 msgid "Connected: %s"
 msgstr ""
 
-#: extension.js:84
+#: extension.js:85
 msgid "unknown server"
 msgstr ""
 
-#: extension.js:84
+#: extension.js:85
 msgid "VPN disconnected"
 msgstr ""
 
-#: extension.js:140
+#: extension.js:142
 msgid "Settings"
 msgstr ""
 
@@ -208,23 +214,41 @@ msgid "Refresh the interface list"
 msgstr ""
 
 #: prefs.js:109
-msgid "Appearance"
+msgid "Experimental"
 msgstr ""
 
 #: prefs.js:110
+msgid "Test features. Reconnection does not provide leak protection."
+msgstr ""
+
+#: prefs.js:112
+msgid "Reconnect after suspend (experimental)"
+msgstr ""
+
+#: prefs.js:113
+msgid ""
+"Reconnect the previously active server after wake. IP and DNS traffic may "
+"bypass the VPN while reconnecting."
+msgstr ""
+
+#: prefs.js:117
+msgid "Appearance"
+msgstr ""
+
+#: prefs.js:118
 msgid ""
 "Light or dark icons are selected automatically based on the Shell theme."
 msgstr ""
 
-#: prefs.js:113
+#: prefs.js:121
 msgid "Top bar icon"
 msgstr ""
 
-#: prefs.js:114
+#: prefs.js:122
 msgid "Standard"
 msgstr ""
 
-#: prefs.js:114
+#: prefs.js:122
 msgid "Colored"
 msgstr ""
 
@@ -250,6 +274,10 @@ msgstr ""
 
 #: qtSettings.js:79
 msgid "Corrupted or unsupported QVariant list"
+msgstr ""
+
+#: resumeRecovery.js:28
+msgid "Experimental reconnect skipped: the active server is unknown"
 msgstr ""
 
 #: serverParser.js:5
@@ -310,6 +338,16 @@ msgstr ""
 
 #: serverStore.js:148
 msgid "Failed to reload the configuration before connecting"
+msgstr ""
+
+#: sleepMonitor.js:20
+#, javascript-format
+msgid "Experimental reconnect: %s is unavailable"
+msgstr ""
+
+#: sleepMonitor.js:27
+#, javascript-format
+msgid "Experimental reconnect: failed to monitor %s"
 msgstr ""
 
 #: tunnelConfig.js:14
@@ -384,26 +422,42 @@ msgstr ""
 msgid "Invalid MTU or keepalive settings"
 msgstr ""
 
-#: vpnController.js:62
+#: underlayNetwork.js:47
+msgid "Failed to inspect the underlying network routes"
+msgstr ""
+
+#: underlayNetwork.js:100
+msgid "No underlying IPv4 gateway became available after wake"
+msgstr ""
+
+#: vpnController.js:114
+msgid "Waiting for the network gateway after wake…"
+msgstr ""
+
+#: vpnController.js:115
+msgid "Reconnecting after suspend (experimental)…"
+msgstr ""
+
+#: vpnController.js:116
 msgid "Disconnecting…"
 msgstr ""
 
-#: vpnController.js:62
+#: vpnController.js:116
 msgid "Connecting…"
 msgstr ""
 
-#: vpnController.js:63
+#: vpnController.js:117
 msgid "Checking the Amnezia service…"
 msgstr ""
 
-#: vpnController.js:86
+#: vpnController.js:167
 msgid "Select an available server from the menu"
 msgstr ""
 
-#: vpnController.js:100
+#: vpnController.js:181
 msgid "Failed to resolve the VPN server IPv4 address"
 msgstr ""
 
-#: vpnController.js:106
+#: vpnController.js:187
 msgid "Only IPv4 VPN server addresses are currently supported"
 msgstr ""
