@@ -1,3 +1,4 @@
+import {gettext as _} from './i18n.js';
 import Gio from 'gi://Gio';
 import {AmneziaService} from './amneziaService.js';
 import {buildTunnelConfig} from './tunnelConfig.js';
@@ -58,8 +59,8 @@ export class VpnController {
             busy: this._busy,
             activeServerId: active?.id ?? null,
             activeServerName: active?.name ?? null,
-            message: this._busy ? (this._disconnecting ? 'Отключение…' : 'Подключение…')
-                : this._error || (this._status.available ? '' : 'Проверка службы Amnezia…'),
+            message: this._busy ? (this._disconnecting ? _("Disconnecting…") : _("Connecting…"))
+                : this._error || (this._status.available ? '' : _("Checking the Amnezia service…")),
         });
     }
 
@@ -72,7 +73,7 @@ export class VpnController {
         this._emit();
         try {
             if (!this._status.available)
-                throw new Error('Служба Amnezia недоступна');
+                throw new Error(_("The Amnezia service is unavailable"));
             if (this._disconnecting) {
                 await this._service.command({type: 'deactivate'});
             } else {
@@ -82,7 +83,7 @@ export class VpnController {
                 if (this._destroyed)
                     return;
                 if (!server)
-                    throw new Error('Выберите доступный сервер в меню');
+                    throw new Error(_("Select an available server from the menu"));
                 const payload = buildTunnelConfig(server, tunnelSettings);
                 let endpoint = Gio.InetAddress.new_from_string(payload.serverIpv4AddrIn);
                 if (!endpoint) {
@@ -96,13 +97,13 @@ export class VpnController {
                                         throw new Error();
                                     resolve(ipv4);
                                 } catch {
-                                    reject(new Error('Не удалось определить IPv4-адрес VPN-сервера'));
+                                    reject(new Error(_("Failed to resolve the VPN server IPv4 address")));
                                 }
                             });
                     });
                 }
                 if (endpoint.get_family() !== Gio.SocketFamily.IPV4)
-                    throw new Error('Пока поддерживаются только IPv4-адреса VPN-серверов');
+                    throw new Error(_("Only IPv4 VPN server addresses are currently supported"));
                 if (this._destroyed)
                     return;
                 const host = endpoint.to_string();

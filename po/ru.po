@@ -1,0 +1,408 @@
+# Russian translations for the AmneziaWG GNOME Shell extension.
+# Copyright (C) 2026 AmneziaWG extension contributors
+# This file is distributed under the same license as the extension.
+msgid ""
+msgstr ""
+"Project-Id-Version: amneziawg 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-16 23:32+0300\n"
+"PO-Revision-Date: 2026-11-16 00:00+0300\n"
+"Last-Translator: AmneziaWG extension contributors\n"
+"Language-Team: Russian\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
+
+#: amneziaService.js:38
+msgid "The Amnezia service is not responding"
+msgstr "Служба Amnezia не отвечает"
+
+#: amneziaService.js:59 vpnController.js:76
+msgid "The Amnezia service is unavailable"
+msgstr "Служба Amnezia недоступна"
+
+#: amneziaService.js:66
+msgid "Not connected to the Amnezia service"
+msgstr "Нет соединения со службой Amnezia"
+
+#: amneziaService.js:87
+msgid "Failed to send a command to the Amnezia service"
+msgstr "Ошибка отправки команды службе Amnezia"
+
+#: amneziaService.js:100
+msgid "The service connection was closed"
+msgstr "Соединение со службой закрыто"
+
+#: amneziaService.js:106
+msgid "The service response is too large"
+msgstr "Ответ службы слишком большой"
+
+#: amneziaService.js:114
+msgid "Invalid service response"
+msgstr "Некорректный ответ службы"
+
+#: amneziaService.js:122
+msgid "Failed to read the Amnezia service status"
+msgstr "Ошибка чтения состояния службы Amnezia"
+
+#: amneziaService.js:130
+msgid "Invalid service status"
+msgstr "Некорректное состояние службы"
+
+#: amneziaService.js:148
+msgid "The service failed to connect the VPN"
+msgstr "Служба не смогла подключить VPN"
+
+#: amneziaService.js:152
+msgid "The service reported a VPN error"
+msgstr "Служба сообщила об ошибке VPN"
+
+#: amneziaService.js:153
+msgid "VPN error in the Amnezia service"
+msgstr "Ошибка VPN в службе Amnezia"
+
+#: amneziaService.js:160
+msgid "The service status is not yet known"
+msgstr "Состояние службы пока неизвестно"
+
+#: amneziaService.js:162
+msgid "Wait for the previous command to finish"
+msgstr "Дождитесь завершения предыдущей команды"
+
+#: amneziaService.js:164
+msgid "Unknown VPN command"
+msgstr "Неизвестная команда VPN"
+
+#: amneziaService.js:169
+msgid "The service did not confirm the VPN connection or disconnection"
+msgstr "Служба не подтвердила подключение или отключение VPN"
+
+#: amneziaService.js:205
+msgid "Connection to the Amnezia service was lost"
+msgstr "Соединение со службой Amnezia потеряно"
+
+#: amneziaService.js:256
+msgid "The Amnezia service response timed out"
+msgstr "Служба Amnezia не ответила вовремя"
+
+#: amneziaService.js:277
+msgid "The Amnezia service closed the connection"
+msgstr "Служба Amnezia закрыла соединение"
+
+#: amneziaService.js:283
+msgid "The Amnezia service response is too large"
+msgstr "Слишком большой ответ службы Amnezia"
+
+#: amneziaService.js:291
+msgid "Invalid response from the Amnezia service"
+msgstr "Некорректный ответ службы Amnezia"
+
+#: amneziaService.js:297
+msgid "The service response is missing the VPN status"
+msgstr "В ответе службы отсутствует состояние VPN"
+
+#: amneziaService.js:318
+msgid "Failed to send a request to the Amnezia service"
+msgstr "Не удалось отправить запрос службе Amnezia"
+
+#: amneziaService.js:322
+msgid "Failed to connect to the Amnezia service"
+msgstr "Не удалось подключиться к службе Amnezia"
+
+#: extension.js:47
+msgid "Amnezia"
+msgstr "Amnezia"
+
+#: extension.js:71 extension.js:72
+msgid "Checking VPN…"
+msgstr "Проверка VPN…"
+
+#: extension.js:81
+msgid "VPN connected"
+msgstr "VPN подключён"
+
+#: extension.js:81
+msgid "Select a server"
+msgstr "Выберите сервер"
+
+#: extension.js:84
+#, javascript-format
+msgid "Connected: %s"
+msgstr "Подключено: %s"
+
+#: extension.js:84
+msgid "unknown server"
+msgstr "сервер не определён"
+
+#: extension.js:84
+msgid "VPN disconnected"
+msgstr "VPN отключён"
+
+#: extension.js:140
+msgid "Settings"
+msgstr "Настройки"
+
+#: networkPolicy.js:7
+msgid "Invalid IP entry in split tunneling"
+msgstr "Некорректная запись IP в split tunneling"
+
+#: networkPolicy.js:16
+msgid "Invalid subnet in split tunneling"
+msgstr "Некорректная подсеть в split tunneling"
+
+#: prefs.js:17
+msgid "Connection"
+msgstr "Подключение"
+
+#: prefs.js:19
+msgid "Path to AmneziaVPN.conf"
+msgstr "Путь к AmneziaVPN.conf"
+
+#: prefs.js:38
+msgid "The configuration file is accessible"
+msgstr "Файл конфигурации доступен"
+
+#: prefs.js:38
+msgid "File not found or unreadable"
+msgstr "Файл не найден или недоступен для чтения"
+
+#: prefs.js:44 prefs.js:46
+msgid "Failed to check the configuration file"
+msgstr "Не удалось проверить файл конфигурации"
+
+#: prefs.js:49
+msgid "Select a configuration file"
+msgstr "Выбрать файл конфигурации"
+
+#: prefs.js:52
+msgid "Select AmneziaVPN.conf"
+msgstr "Выбрать AmneziaVPN.conf"
+
+#: prefs.js:63
+msgid "Failed to select a file"
+msgstr "Не удалось выбрать файл"
+
+#: prefs.js:68
+msgid "Network interface"
+msgstr "Сетевой интерфейс"
+
+#: prefs.js:69
+msgid "Interface used to monitor VPN status"
+msgstr "Интерфейс для отслеживания состояния VPN"
+
+#: prefs.js:88
+#, javascript-format
+msgid "Failed to list network interfaces: %s"
+msgstr "Не удалось получить список сетевых интерфейсов: %s"
+
+#: prefs.js:95
+msgid "Automatic"
+msgstr "Автоматически"
+
+#: prefs.js:105
+msgid "Refresh the interface list"
+msgstr "Обновить список интерфейсов"
+
+#: prefs.js:109
+msgid "Appearance"
+msgstr "Внешний вид"
+
+#: prefs.js:110
+msgid ""
+"Light or dark icons are selected automatically based on the Shell theme."
+msgstr "Светлый или тёмный вариант иконок выбирается автоматически по теме Shell."
+
+#: prefs.js:113
+msgid "Top bar icon"
+msgstr "Иконка в верхней панели"
+
+#: prefs.js:114
+msgid "Standard"
+msgstr "Обычная"
+
+#: prefs.js:114
+msgid "Colored"
+msgstr "Цветная"
+
+#: qtSettings.js:39
+msgid "Invalid escape sequence in Qt settings"
+msgstr "Некорректное экранирование настроек Qt"
+
+#: qtSettings.js:48
+msgid "Unsupported escape sequence in Qt settings"
+msgstr "Неподдерживаемое экранирование настроек Qt"
+
+#: qtSettings.js:60
+msgid "Unterminated string in Qt settings"
+msgstr "Незакрытая строка в настройках Qt"
+
+#: qtSettings.js:71
+msgid "The site list uses an unsupported Qt format"
+msgstr "Список сайтов имеет неподдерживаемый формат Qt"
+
+#: qtSettings.js:74
+msgid "Invalid QVariant size or encoding"
+msgstr "Некорректный размер или кодировка QVariant"
+
+#: qtSettings.js:79
+msgid "Corrupted or unsupported QVariant list"
+msgstr "Повреждён или не поддерживается список QVariant"
+
+#: serverParser.js:5
+msgid "The configuration is missing serversList"
+msgstr "В конфигурации отсутствует serversList"
+
+#: serverParser.js:22
+msgid "Invalid escape sequence in serversList"
+msgstr "Некорректное экранирование serversList"
+
+#: serverParser.js:27
+msgid "Invalid hexadecimal code in serversList"
+msgstr "Некорректный hex-код в serversList"
+
+#: serverParser.js:40
+msgid "Failed to parse the server list JSON"
+msgstr "Не удалось разобрать JSON списка серверов"
+
+#: serverParser.js:44
+msgid "Invalid server list structure"
+msgstr "Некорректная структура списка серверов"
+
+#: serverStore.js:30
+msgid "Specify an absolute configuration path in settings"
+msgstr "Укажите абсолютный путь к конфигурации в настройках"
+
+#: serverStore.js:65
+msgid "Loading servers…"
+msgstr "Загрузка серверов…"
+
+#: serverStore.js:79
+msgid "Unnamed server"
+msgstr "Сервер без названия"
+
+#: serverStore.js:82
+msgid "No IP address"
+msgstr "Сервер без IP"
+
+#: serverStore.js:87
+msgid "No servers"
+msgstr "Нет серверов"
+
+#: serverStore.js:94
+msgid "Configuration file not found"
+msgstr "Файл конфигурации не найден"
+
+#: serverStore.js:96
+msgid "Configuration file access denied"
+msgstr "Нет доступа к файлу конфигурации"
+
+#: serverStore.js:97
+msgid "Failed to read the server list"
+msgstr "Не удалось прочитать список серверов"
+
+#: serverStore.js:137
+msgid "The configuration file is unavailable"
+msgstr "Файл конфигурации недоступен"
+
+#: serverStore.js:148
+msgid "Failed to reload the configuration before connecting"
+msgstr "Не удалось перечитать конфигурацию перед подключением"
+
+#: tunnelConfig.js:14
+msgid "Invalid VPN key in the saved configuration"
+msgstr "В сохранённой конфигурации некорректный ключ VPN"
+
+#: tunnelConfig.js:26
+msgid "Invalid flag in VPN settings"
+msgstr "Некорректный флаг в настройках VPN"
+
+#: tunnelConfig.js:39
+msgid "Unknown split tunneling mode"
+msgstr "Неизвестный режим split tunneling"
+
+#: tunnelConfig.js:46
+msgid "Invalid list of allowed DNS servers"
+msgstr "Некорректный список разрешённых DNS"
+
+#: tunnelConfig.js:55
+msgid "Invalid split tunneling site list"
+msgstr "Некорректный список сайтов split tunneling"
+
+#: tunnelConfig.js:59
+msgid "Unsupported site list entries"
+msgstr "Неподдерживаемые записи списка сайтов"
+
+#: tunnelConfig.js:73
+msgid "Strict kill switch is not yet supported by the extension"
+msgstr "Строгий kill switch пока не поддерживается расширением"
+
+#: tunnelConfig.js:75
+msgid "Application split tunneling is not yet supported by the extension"
+msgstr "Split tunneling приложений пока не поддерживается расширением"
+
+#: tunnelConfig.js:80
+msgid "Only AmneziaWG and WireGuard are currently supported"
+msgstr "Пока поддерживаются только AmneziaWG и WireGuard"
+
+#: tunnelConfig.js:86
+msgid "No saved configuration: connect to this server in AmneziaVPN first"
+msgstr "Нет готового конфига: сначала подключите этот сервер в AmneziaVPN"
+
+#: tunnelConfig.js:91 tunnelConfig.js:94
+msgid "The saved tunnel configuration is corrupted"
+msgstr "Сохранённая конфигурация туннеля повреждена"
+
+#: tunnelConfig.js:100
+msgid "The configuration is missing the client IPv4 address"
+msgstr "В конфигурации отсутствует IPv4-адрес клиента"
+
+#: tunnelConfig.js:103
+msgid "Invalid server address or port in the configuration"
+msgstr "В конфигурации некорректный адрес или порт сервера"
+
+#: tunnelConfig.js:118
+msgid "The saved configuration has no valid DNS servers"
+msgstr "В сохранённой конфигурации отсутствуют корректные DNS-серверы"
+
+#: tunnelConfig.js:125
+msgid "The configuration is missing AllowedIPs"
+msgstr "В конфигурации отсутствует список AllowedIPs"
+
+#: tunnelConfig.js:128
+msgid "Invalid AllowedIPs list"
+msgstr "Некорректный список AllowedIPs"
+
+#: tunnelConfig.js:135
+msgid "Invalid network in AllowedIPs"
+msgstr "Некорректная сеть в AllowedIPs"
+
+#: tunnelConfig.js:147
+msgid "Invalid MTU or keepalive settings"
+msgstr "Некорректные параметры MTU или keepalive"
+
+#: vpnController.js:62
+msgid "Disconnecting…"
+msgstr "Отключение…"
+
+#: vpnController.js:62
+msgid "Connecting…"
+msgstr "Подключение…"
+
+#: vpnController.js:63
+msgid "Checking the Amnezia service…"
+msgstr "Проверка службы Amnezia…"
+
+#: vpnController.js:86
+msgid "Select an available server from the menu"
+msgstr "Выберите доступный сервер в меню"
+
+#: vpnController.js:100
+msgid "Failed to resolve the VPN server IPv4 address"
+msgstr "Не удалось определить IPv4-адрес VPN-сервера"
+
+#: vpnController.js:106
+msgid "Only IPv4 VPN server addresses are currently supported"
+msgstr "Пока поддерживаются только IPv4-адреса VPN-серверов"

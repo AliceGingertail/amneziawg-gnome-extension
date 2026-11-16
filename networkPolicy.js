@@ -1,9 +1,10 @@
+import {gettext as _} from './i18n.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 export function networkRange(value) {
     if (typeof value !== 'string')
-        throw new Error('Некорректная запись IP в split tunneling');
+        throw new Error(_('Invalid IP entry in split tunneling'));
     const parts = value.trim().split('/');
     const ip = Gio.InetAddress.new_from_string(parts[0]);
     if (!ip || parts.length > 2)
@@ -12,7 +13,7 @@ export function networkRange(value) {
     const range = parts.length === 1 ? (isIpv6 ? 128 : 32) : Number(parts[1]);
     if ((parts.length === 2 && !/^\d+$/.test(parts[1])) ||
         !Number.isInteger(range) || range < 0 || range > (isIpv6 ? 128 : 32))
-        throw new Error('Некорректная подсеть в split tunneling');
+        throw new Error(_('Invalid subnet in split tunneling'));
     const canonical = ip.to_string();
     let bytes;
     if (isIpv6) {
@@ -60,12 +61,12 @@ function resolveHost(host, parent) {
                 resolve(addresses);
         };
         if (parent?.is_cancelled()) {
-            finish(new Error('Подготовка маршрутов отменена'));
+            finish(new Error(_('Route preparation was cancelled')));
             return;
         }
         timer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 5000, () => {
             timer = 0;
-            finish(new Error('Истекло время разрешения домена split tunneling'));
+            finish(new Error(_('Split tunneling domain resolution timed out')));
             return GLib.SOURCE_REMOVE;
         });
         Gio.Resolver.get_default().lookup_by_name_async(host, cancellable, (resolver, result) => {
@@ -75,7 +76,7 @@ function resolveHost(host, parent) {
                     throw new Error();
                 finish(null, addresses);
             } catch {
-                finish(new Error('Не удалось разрешить домен split tunneling'));
+                finish(new Error(_('Failed to resolve the split tunneling domain')));
             }
         });
     });
@@ -87,7 +88,7 @@ export async function applyTunnelPolicy(payload, settings = {}, cancellable = nu
     if (!settings.sitesSplitTunnelingEnabled || settings.routeMode === 0)
         return payload;
     if (![1, 2].includes(settings.routeMode))
-        throw new Error('Неизвестный режим split tunneling');
+        throw new Error(_('Unknown split tunneling mode'));
     const full = payload.allowedIPAddressRanges.length === 2 &&
         payload.allowedIPAddressRanges.some(net => net.address === '0.0.0.0' && net.range === 0) &&
         payload.allowedIPAddressRanges.some(net => net.address === '::' && net.range === 0);
@@ -109,7 +110,7 @@ export async function applyTunnelPolicy(payload, settings = {}, cancellable = nu
     const worker = async () => {
         while (next < settings.sites.length) {
             if (operation.is_cancelled())
-                throw new Error('Подготовка маршрутов отменена');
+                throw new Error(_('Route preparation was cancelled'));
             const index = next++;
             const entry = settings.sites[index];
             const direct = networkRange(entry.site);
@@ -119,11 +120,11 @@ export async function applyTunnelPolicy(payload, settings = {}, cancellable = nu
             }
             const host = entry.site.trim();
             if (!host || /[\s/:?#@]/u.test(host) || /^\d+(\.\d+)+$/.test(host))
-                throw new Error('Некорректный домен или IP в split tunneling');
+                throw new Error(_('Invalid domain or IP address in split tunneling'));
             const cached = entry.addresses.map(value => {
                 const range = networkRange(value);
                 if (!range)
-                    throw new Error('Некорректный сохранённый IP в split tunneling');
+                    throw new Error(_('Invalid cached IP address in split tunneling'));
                 return range;
             });
             let resolved = [];
@@ -133,14 +134,14 @@ export async function applyTunnelPolicy(payload, settings = {}, cancellable = nu
                     throw new Error();
             } catch {
                 if (operation.is_cancelled())
-                    throw new Error('Подготовка маршрутов отменена');
+                    throw new Error(_('Route preparation was cancelled'));
                 if (!cached.length)
-                    throw new Error('Не удалось разрешить домен split tunneling; сохранённых IP нет');
+                    throw new Error(_('Failed to resolve the split tunneling domain; no cached IP addresses are available'));
             }
             results[index] = [...cached, ...resolved.map(value => {
                 const range = networkRange(value);
                 if (!range)
-                    throw new Error('Некорректный результат DNS для split tunneling');
+                    throw new Error(_('Invalid DNS result for split tunneling'));
                 return range;
             })];
         }
@@ -148,10 +149,10 @@ export async function applyTunnelPolicy(payload, settings = {}, cancellable = nu
     try {
         await Promise.all(Array.from({length: Math.min(4, settings.sites.length)}, () => worker()));
         if (operation.is_cancelled())
-            throw new Error('Подготовка маршрутов отменена');
+            throw new Error(_('Route preparation was cancelled'));
     } catch (error) {
         if (timedOut)
-            throw new Error('Истекло время подготовки split tunneling');
+            throw new Error(_('Split tunneling preparation timed out'));
         throw error;
     } finally {
         if (timer)

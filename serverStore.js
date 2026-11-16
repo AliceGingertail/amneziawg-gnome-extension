@@ -1,3 +1,4 @@
+import {gettext as _} from './i18n.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
@@ -5,7 +6,7 @@ import {parseServers} from './serverParser.js';
 import {parseTunnelSettings} from './tunnelConfig.js';
 
 // Owns file I/O and monitoring, but knows nothing about menu widgets. onUpdate
-// receives {servers, message}; only safe display data leaves this module.
+// receives {servers, message, loading?}; only safe display data leaves this module.
 export class ServerStore {
     constructor(settings, onUpdate) {
         this._settings = settings;
@@ -26,7 +27,7 @@ export class ServerStore {
         const expanded = path.startsWith('~/')
             ? GLib.build_filenamev([GLib.get_home_dir(), path.slice(2)]) : path;
         if (!GLib.path_is_absolute(expanded)) {
-            this._onUpdate({servers: [], message: 'Укажите абсолютный путь к конфигурации в настройках'});
+            this._onUpdate({servers: [], message: _('Specify an absolute configuration path in settings')});
             return;
         }
         this._file = Gio.File.new_for_path(expanded);
@@ -61,7 +62,7 @@ export class ServerStore {
         this._cancellable?.cancel();
         const cancellable = new Gio.Cancellable();
         this._cancellable = cancellable;
-        this._onUpdate({servers: [], message: 'Загрузка серверов…'});
+        this._onUpdate({servers: [], message: _('Loading servers…'), loading: true});
         this._file.load_contents_async(cancellable, (file, result) => {
             try {
                 const [, bytes] = file.load_contents_finish(result);
@@ -75,25 +76,25 @@ export class ServerStore {
                 
                 const servers = [...this._records].map(([id, server]) => {
                     const name = typeof server.description === 'string' && server.description.trim()
-                        ? server.description.trim() : 'Сервер без названия';
+                        ? server.description.trim() : _('Unnamed server');
                     
                     const hostName = typeof server.hostName === 'string' && server.hostName.trim()
-                        ? server.hostName.trim() : 'Сервер без IP'; // Change to engl
+                        ? server.hostName.trim() : _('No IP address');
                     
                     return {id, name, hostName};
                 });
 
-                this._onUpdate({ servers, message: servers.length ? '' : 'Нет серверов' });
+                this._onUpdate({ servers, message: servers.length ? '' : _('No servers') });
                 
             } catch (error) {
                 if (this._destroyed || cancellable.is_cancelled())
                     return;
                 this._records.clear();
                 const message = error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND)
-                    ? 'Файл конфигурации не найден'
+                    ? _('Configuration file not found')
                     : error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.PERMISSION_DENIED)
-                        ? 'Нет доступа к файлу конфигурации'
-                        : 'Не удалось прочитать список серверов';
+                        ? _('Configuration file access denied')
+                        : _('Failed to read the server list');
                 // Do not log raw exceptions: configs contain credentials and keys.
                 this._onUpdate({servers: [], message});
             }
@@ -133,7 +134,7 @@ export class ServerStore {
     getConnection(id, cancellable) {
         const file = this._file;
         if (!file || this._destroyed)
-            return Promise.reject(new Error('Файл конфигурации недоступен'));
+            return Promise.reject(new Error(_('The configuration file is unavailable')));
         return new Promise((resolve, reject) => {
             file.load_contents_async(cancellable, (source, result) => {
                 try {
@@ -144,7 +145,7 @@ export class ServerStore {
                     const records = this._index(parseServers(text));
                     resolve({server: records.get(id) ?? null, settings: parseTunnelSettings(text)});
                 } catch {
-                    reject(new Error('Не удалось перечитать конфигурацию перед подключением'));
+                    reject(new Error(_('Failed to reload the configuration before connecting')));
                 }
             });
         });

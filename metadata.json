@@ -3,6 +3,7 @@
   "description": "Amnezia interface control extension",
   "uuid": "amnezia@example.com",
   "settings-schema": "org.gnome.shell.extensions.amneziawg",
+  "gettext-domain": "amneziawg",
   "shell-version": [
     "50"
   ]

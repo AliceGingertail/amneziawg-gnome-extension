@@ -1,3 +1,4 @@
+import {gettext as _, format} from './i18n.js';
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -13,9 +14,9 @@ export default class AmneziaPreferences extends ExtensionPreferences {
         const page = new Adw.PreferencesPage({title: 'AmneziaVPN', icon_name: 'network-vpn-symbolic'});
         window.add(page);
 
-        const connection = new Adw.PreferencesGroup({title: 'Подключение'});
+        const connection = new Adw.PreferencesGroup({title: _('Connection')});
         page.add(connection);
-        const path = new Adw.EntryRow({title: 'Путь к AmneziaVPN.conf'});
+        const path = new Adw.EntryRow({title: _('Path to AmneziaVPN.conf')});
 
         settings.bind('config-path', path, 'text', Gio.SettingsBindFlags.DEFAULT);
         connection.add(path);
@@ -34,21 +35,21 @@ export default class AmneziaPreferences extends ExtensionPreferences {
                     'access::can-read', Gio.FileQueryInfoFlags.NONE, null
                 ).get_attribute_boolean('access::can-read');
 
-            status.title = valid ? 'Файл конфигурации доступен' : 'Файл не найден или недоступен для чтения';
+            status.title = valid ? _('The configuration file is accessible') : _('File not found or unreadable');
             path[valid ? 'remove_css_class' : 'add_css_class']('error');
 
         };
 
         path.connect('notify::text', () => {
-            try { validatePath(); } catch { status.title = 'Не удалось проверить файл конфигурации'; }
+            try { validatePath(); } catch { status.title = _('Failed to check the configuration file'); }
         });
-        try { validatePath(); } catch { status.title = 'Не удалось проверить файл конфигурации'; }
+        try { validatePath(); } catch { status.title = _('Failed to check the configuration file'); }
 
         const browse = new Gtk.Button({icon_name: 'folder-open-symbolic', valign: Gtk.Align.CENTER,
-            tooltip_text: 'Выбрать файл конфигурации'});
+            tooltip_text: _('Select a configuration file')});
         path.add_suffix(browse);
         browse.connect('clicked', () => {
-            const dialog = new Gtk.FileDialog({title: 'Выбрать AmneziaVPN.conf'});
+            const dialog = new Gtk.FileDialog({title: _('Select AmneziaVPN.conf')});
 
             dialog.open(window, null, (source, result) => {
                 try {
@@ -59,13 +60,13 @@ export default class AmneziaPreferences extends ExtensionPreferences {
                 } catch (error) {
 
                     if (!error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED))
-                        window.add_toast(new Adw.Toast({title: 'Не удалось выбрать файл'}));
+                        window.add_toast(new Adw.Toast({title: _('Failed to select a file')}));
                 }
             });
         });
 
-        const interfaces = new Adw.ComboRow({title: 'Сетевой интерфейс',
-            subtitle: 'Интерфейс для отслеживания состояния VPN'});
+        const interfaces = new Adw.ComboRow({title: _('Network interface'),
+            subtitle: _('Interface used to monitor VPN status')});
         connection.add(interfaces);
 
         let names = [];
@@ -84,14 +85,14 @@ export default class AmneziaPreferences extends ExtensionPreferences {
                     enumerator.close(null);
                 }
             } catch (error) {
-                console.warn(`Не удалось получить сетевые интерфейсы: ${error.message}`);
+                console.warn(format(_('Failed to list network interfaces: %s'), error.message));
             }
             names.sort();
             const saved = settings.get_string('network-interface');
             if (saved && !names.includes(saved))
                 names.push(saved);
             names.unshift('');
-            interfaces.model = Gtk.StringList.new(names.map(name => name || 'Автоматически'));
+            interfaces.model = Gtk.StringList.new(names.map(name => name || _('Automatic')));
             interfaces.selected = names.indexOf(saved);
             refreshing = false;
         };
@@ -101,16 +102,16 @@ export default class AmneziaPreferences extends ExtensionPreferences {
                 settings.set_string('network-interface', names[interfaces.selected]);
         });
         const refresh = new Gtk.Button({icon_name: 'view-refresh-symbolic',
-            valign: Gtk.Align.CENTER, tooltip_text: 'Обновить список интерфейсов'});
+            valign: Gtk.Align.CENTER, tooltip_text: _('Refresh the interface list')});
         interfaces.add_suffix(refresh);
         refresh.connect('clicked', reloadInterfaces);
 
-        const appearance = new Adw.PreferencesGroup({title: 'Внешний вид',
-            description: 'Светлый или тёмный вариант иконок выбирается автоматически по теме Shell.'});
+        const appearance = new Adw.PreferencesGroup({title: _('Appearance'),
+            description: _('Light or dark icons are selected automatically based on the Shell theme.')});
         page.add(appearance);
         const styles = ['default', 'color'];
-        const icon = new Adw.ComboRow({title: 'Иконка в верхней панели',
-            model: Gtk.StringList.new(['Обычная', 'Цветная']),
+        const icon = new Adw.ComboRow({title: _('Top bar icon'),
+            model: Gtk.StringList.new([_('Standard'), _('Colored')]),
             selected: styles.indexOf(settings.get_string('icon-style'))});
         appearance.add(icon);
         const preview = new Gtk.Image({pixel_size: 32});

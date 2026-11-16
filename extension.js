@@ -1,3 +1,4 @@
+import {gettext as _, format} from './i18n.js';
 /* extension.js
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,7 +22,7 @@ import Gio from 'gi://Gio';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
 import Clutter from 'gi://Clutter';
@@ -67,8 +68,8 @@ class AmneziaToggle extends QuickMenuToggle {
         const settings = extension.getSettings();
         let currentServers = [];
         let controller = null;
-        let vpnState = {available: false, connected: false, busy: false, message: 'Проверка VPN…'};
-        const statusItem = new PopupMenu.PopupMenuItem('Проверка VPN…', {reactive: false});
+        let vpnState = {available: false, connected: false, busy: false, message: _('Checking VPN…')};
+        const statusItem = new PopupMenu.PopupMenuItem(_('Checking VPN…'), {reactive: false});
         this.menu.addMenuItem(statusItem, 0);
         const updateSelection = () => {
 
@@ -77,10 +78,10 @@ class AmneziaToggle extends QuickMenuToggle {
 
             this.checked = vpnState.connected;
             this.subtitle = vpnState.message || (vpnState.connected
-                ? vpnState.activeServerName ?? 'VPN подключён' : selectedName ?? 'Выберите сервер');
+                ? vpnState.activeServerName ?? _('VPN connected') : selectedName ?? _('Select a server'));
             
             statusItem.label.text = vpnState.message || (vpnState.connected
-                ? `Подключено: ${vpnState.activeServerName ?? 'сервер не определён'}` : 'VPN отключён');
+                ? format(_('Connected: %s'), vpnState.activeServerName ?? _('unknown server')) : _('VPN disconnected'));
             
             
             for (const item of serversSection._getMenuItems()) {
@@ -88,8 +89,8 @@ class AmneziaToggle extends QuickMenuToggle {
                     ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.NONE);
             }
         };
-        const store = new ServerStore(settings, ({servers, message}) => {
-            if (message !== 'Загрузка серверов…')
+        const store = new ServerStore(settings, ({servers, message, loading = false}) => {
+            if (!loading)
                 currentServers = servers;
             serversSection.removeAll();
             if (message) {
@@ -136,7 +137,7 @@ class AmneziaToggle extends QuickMenuToggle {
         });
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addAction('Настройки', () => {
+        this.menu.addAction(_('Settings'), () => {
             Main.panel.statusArea.quickSettings.menu.close();
             extension.openPreferences();
         });

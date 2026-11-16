@@ -1,3 +1,4 @@
+import {gettext as _} from './i18n.js';
 export function readConfValues(text) {
     const sections = new Map();
     let section = 'General';
@@ -35,7 +36,7 @@ export function decodeIniValue(raw) {
             break;
         } else if (char === '\\') {
             if (++i >= raw.length)
-                throw new Error('Некорректное экранирование настроек Qt');
+                throw new Error(_('Invalid escape sequence in Qt settings'));
             const named = {a: '\x07', b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v',
                 '"': '"', "'": "'", '?': '?', '\\': '\\'};
             if (raw[i] in named) {
@@ -44,7 +45,7 @@ export function decodeIniValue(raw) {
                 const hex = raw[i] === 'x';
                 const match = raw.slice(hex ? i + 1 : i).match(hex ? /^[0-9a-fA-F]+/ : /^[0-7]+/);
                 if (!match)
-                    throw new Error('Неподдерживаемое экранирование настроек Qt');
+                    throw new Error(_('Unsupported escape sequence in Qt settings'));
                 let number = 0;
                 for (const digit of match[0])
                     number = (number * (hex ? 16 : 8) + parseInt(digit, hex ? 16 : 8)) & 0xffff;
@@ -56,7 +57,7 @@ export function decodeIniValue(raw) {
         }
     }
     if (quoted)
-        throw new Error('Незакрытая строка в настройках Qt');
+        throw new Error(_('Unterminated string in Qt settings'));
     if (values.length) {
         values.push(result.trim());
         return values;
@@ -67,15 +68,15 @@ export function decodeIniValue(raw) {
 export function decodeVariant(raw) {
     const decoded = decodeIniValue(raw);
     if (typeof decoded !== 'string' || !decoded.startsWith('@Variant(') || !decoded.endsWith(')'))
-        throw new Error('Список сайтов имеет неподдерживаемый формат Qt');
+        throw new Error(_('The site list uses an unsupported Qt format'));
     const binary = decoded.slice(9, -1);
     if (binary.length > 1048576 || [...binary].some(char => char.charCodeAt(0) > 255))
-        throw new Error('Некорректный размер или кодировка QVariant');
+        throw new Error(_('Invalid QVariant size or encoding'));
     const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
     const view = new DataView(bytes.buffer);
     let offset = 0;
     let nodes = 0;
-    const fail = () => { throw new Error('Повреждён или не поддерживается список QVariant'); };
+    const fail = () => { throw new Error(_('Corrupted or unsupported QVariant list')); };
     const uint = () => {
         if (offset + 4 > bytes.length)
             fail();
