@@ -15,3 +15,4 @@ gnome-extensions prefs amnezia@example.com
 
 > [!WARNING]
 > Xray is not supported.
+> A temporary solution for suspend and hibernate is to reconnect using the button event
