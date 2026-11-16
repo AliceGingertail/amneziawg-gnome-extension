@@ -1,179 +1,146 @@
-const { GObject, Gtk } = imports.gi;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const { GsettingsManager } = Me.imports.gsettingsManager;
+import {gettext as _, format} from './i18n.js';
+import Adw from 'gi://Adw';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Gtk from 'gi://Gtk';
 
-function init() {}
+import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-/**
- * Creates a labeled widget (label + child) inside a horizontal box.
- * @param {string} labelText - The text for the label.
- * @param {Gtk.Widget} widget - The widget to pair with the label.
- * @returns {Gtk.Box} - The labeled container.
- */
-function _createLabeledWidget(labelText, widget) {
-    const box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 10 });
+export default class AmneziaPreferences extends ExtensionPreferences {
+    fillPreferencesWindow(window) {
+        const settings = this.getSettings();
 
-    const label = new Gtk.Label({
-        label: labelText,
-        halign: Gtk.Align.START,
-        hexpand: true
-    });
+        window._settings = settings;
+        const page = new Adw.PreferencesPage({title: 'AmneziaVPN', icon_name: 'network-vpn-symbolic'});
+        window.add(page);
 
-    box.append(label);
-    box.append(widget);
+        const connection = new Adw.PreferencesGroup({title: _('Connection')});
+        page.add(connection);
+        const path = new Adw.EntryRow({title: _('Path to AmneziaVPN.conf')});
 
-    return box;
-}
+        settings.bind('config-path', path, 'text', Gio.SettingsBindFlags.DEFAULT);
+        connection.add(path);
 
-/**
- * Creates a ComboBox with predefined options and binds it to a setting.
- * @param {string} labelText - The text for the label.
- * @param {string} settingKey - The key for the setting to bind.
- * @param {Object[]} options - Array of { id, label } objects for ComboBox options.
- * @returns {Gtk.Box} - The labeled ComboBox container.
- */
-function _createLabeledComboBox(gsettingsManager, labelText, settingKey, options) {
-    const comboBox = new Gtk.ComboBoxText();
+        const status = new Adw.ActionRow();
+        connection.add(status);
+        const validatePath = () => {
 
-    options.forEach(option => comboBox.append(option.id, option.label));
-    comboBox.set_active_id(gsettingsManager.getValue(settingKey));
+            const value = path.text;
+            const expanded = value.startsWith('~/')
+                ? GLib.build_filenamev([GLib.get_home_dir(), value.slice(2)]) : value;
 
-    comboBox.connect('changed', () => {
-        gsettingsManager.setValue(settingKey, comboBox.get_active_id());
-    });
+            const valid = GLib.path_is_absolute(expanded) &&
+                GLib.file_test(expanded, GLib.FileTest.IS_REGULAR) &&
+                Gio.File.new_for_path(expanded).query_info(
+                    'access::can-read', Gio.FileQueryInfoFlags.NONE, null
+                ).get_attribute_boolean('access::can-read');
 
-    return _createLabeledWidget(labelText, comboBox);
-}
+            status.title = valid ? _('The configuration file is accessible') : _('File not found or unreadable');
+            path[valid ? 'remove_css_class' : 'add_css_class']('error');
 
-function _createResetBox(gsettingsManager) {
-    const box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 10 });
-    const resetButton = new Gtk.Button({
-        label: 'Reset Settings',
-        halign: Gtk.Align.CENTER
-    });
-    resetButton.connect('clicked', () => {
-        gsettingsManager.resetAllKeys();
-        gsettingsManager.settings.sync();
-    });
-    box.append(resetButton);
-    return box;
-}
+        };
 
-/**
- * Creates a labeled Entry widget bound to a setting.
- * @param {string} labelText - The text for the label.
- * @param {string} settingKey - The key for the setting to bind.
- * @returns {Object} - { box: Gtk.Box, entry: Gtk.Entry }.
- */
-function _createLabeledEntry(gsettingsManager, labelText, settingKey) {
-    const box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 10 });
+        path.connect('notify::text', () => {
+            try { validatePath(); } catch { status.title = _('Failed to check the configuration file'); }
+        });
+        try { validatePath(); } catch { status.title = _('Failed to check the configuration file'); }
 
-    const label = new Gtk.Label({
-        label: labelText,
-        halign: Gtk.Align.START,
-        hexpand: true
-    });
+        const browse = new Gtk.Button({icon_name: 'folder-open-symbolic', valign: Gtk.Align.CENTER,
+            tooltip_text: _('Select a configuration file')});
+        path.add_suffix(browse);
+        browse.connect('clicked', () => {
+            const dialog = new Gtk.FileDialog({title: _('Select AmneziaVPN.conf')});
 
-    const entry = new Gtk.Entry({
-        text: gsettingsManager.getValue(settingKey),
-        hexpand: true
-    });
+            dialog.open(window, null, (source, result) => {
+                try {
+                    const selected = source.open_finish(result).get_path();
 
-    const saveButton = new Gtk.Button({
-        label: 'Save',
-    });
+                    if (selected)
+                        settings.set_string('config-path', selected);
+                } catch (error) {
 
-    saveButton.connect('clicked', () => {
-    gsettingsManager.setValue('interface', entry.text);
-    gsettingsManager.settings.sync();
-    });
+                    if (!error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED))
+                        window.add_toast(new Adw.Toast({title: _('Failed to select a file')}));
+                }
+            });
+        });
 
-    box.append(label);
-    box.append(entry);
-    box.append(saveButton);
+        const interfaces = new Adw.ComboRow({title: _('Network interface'),
+            subtitle: _('Interface used to monitor VPN status')});
+        connection.add(interfaces);
 
-    return box;
-}
+        let names = [];
+        let refreshing = false;
+        const reloadInterfaces = () => {
+            refreshing = true;
+            names = [];
+            try {
+                const enumerator = Gio.File.new_for_path('/sys/class/net').enumerate_children(
+                    'standard::name', Gio.FileQueryInfoFlags.NONE, null);
+                try {
+                    let info;
+                    while ((info = enumerator.next_file(null)))
+                        names.push(info.get_name());
+                } finally {
+                    enumerator.close(null);
+                }
+            } catch (error) {
+                console.warn(format(_('Failed to list network interfaces: %s'), error.message));
+            }
+            names.sort();
+            const saved = settings.get_string('network-interface');
+            if (saved && !names.includes(saved))
+                names.push(saved);
+            names.unshift('');
+            interfaces.model = Gtk.StringList.new(names.map(name => name || _('Automatic')));
+            interfaces.selected = names.indexOf(saved);
+            refreshing = false;
+        };
+        reloadInterfaces();
+        interfaces.connect('notify::selected', () => {
+            if (!refreshing && names[interfaces.selected] !== undefined)
+                settings.set_string('network-interface', names[interfaces.selected]);
+        });
+        const refresh = new Gtk.Button({icon_name: 'view-refresh-symbolic',
+            valign: Gtk.Align.CENTER, tooltip_text: _('Refresh the interface list')});
+        interfaces.add_suffix(refresh);
+        refresh.connect('clicked', reloadInterfaces);
 
-/**
- * Creates a labeled SpinButton widget bound to a setting.
- * @param {string} labelText - The text for the label.
- * @param {string} settingKey - The key for the setting to bind.
- * @param {number} min - Minimum value.
- * @param {number} max - Maximum value.
- * @param {number} step - Step increment.
- * @returns {Object} - { box: Gtk.Box, spinButton: Gtk.SpinButton }.
- */
-function _createLabeledSpinButton(gsettingsManager, labelText, settingKey, min, max, step) {
-    const adjustment = new Gtk.Adjustment({
-        lower: min,
-        upper: max,
-        step_increment: step
-    });
+        const experimental = new Adw.PreferencesGroup({title: _('Experimental'),
+            description: _('Test features. Reconnection does not provide leak protection.')});
+        page.add(experimental);
+        const resume = new Adw.SwitchRow({title: _('Reconnect after suspend (experimental)'),
+            subtitle: _('Reconnect the previously active server after wake. IP and DNS traffic may bypass the VPN while reconnecting.')});
+        settings.bind('experimental-resume-reconnect', resume, 'active', Gio.SettingsBindFlags.DEFAULT);
+        experimental.add(resume);
 
-    const spinButton = new Gtk.SpinButton({
-        adjustment,
-        value: gsettingsManager.getValue(settingKey),
-        hexpand: true
-    });
+        const appearance = new Adw.PreferencesGroup({title: _('Appearance'),
+            description: _('Light or dark icons are selected automatically based on the Shell theme.')});
+        page.add(appearance);
+        const styles = ['default', 'color'];
+        const icon = new Adw.ComboRow({title: _('Top bar icon'),
+            model: Gtk.StringList.new([_('Standard'), _('Colored')]),
+            selected: styles.indexOf(settings.get_string('icon-style'))});
+        appearance.add(icon);
+        const preview = new Gtk.Image({pixel_size: 32});
+        icon.add_prefix(preview);
 
-    spinButton.connect('value-changed', () => {
-        gsettingsManager.setValue(settingKey, spinButton.get_value_as_int());
-    });
+        const updatePreview = () => {
+            const variant = Adw.StyleManager.get_default().dark ? 'dark' : 'light';
+            preview.set_from_file(this.dir.resolve_relative_path(
+                `icons/${settings.get_string('icon-style')}-${variant}.png`).get_path());
+        };
+        icon.connect('notify::selected', () => {
+            settings.set_string('icon-style', styles[icon.selected]);
+            updatePreview();
+        });
 
-    return {
-        box: _createLabeledWidget(labelText, spinButton),
-        spinButton
-    };
-}
-
-/**
- * Builds the preferences widget.
- * @returns {Gtk.Box} - The main container with all preferences.
- */
-function buildPrefsWidget() {
-    const gsettingsManager = new GsettingsManager();
-    const widget = new Gtk.Box({
-        orientation: Gtk.Orientation.VERTICAL,
-        spacing: 10,
-        margin_top: 20,
-        margin_bottom: 20,
-        margin_start: 20,
-        margin_end: 20
-    });
-
-    // Interface Name Entry
-    const interfaceBox = _createLabeledEntry(
-        gsettingsManager,
-        'Interface Name:',
-        'interface'
-    );
-    widget.append(interfaceBox);
-
-    // Icon Size Spin Button
-    const { box: iconSizeBox, spinButton: iconSizeSpinButton } = _createLabeledSpinButton(
-        gsettingsManager,
-        'Icon Size:',
-        'icon-size',
-        16, // Minimum size
-        128, // Maximum size
-        1 // Step increment
-    );
-    widget.append(iconSizeBox);
-
-    // Icon Theme ComboBox
-    const iconThemeBox = _createLabeledComboBox(
-        gsettingsManager,
-        'Icon Theme:',
-        'manual-theme',
-        [
-            { id: 'dark', label: 'Dark' },
-            { id: 'light', label: 'Light' }
-        ]
-    );
-    widget.append(iconThemeBox);
-    widget.append(_createResetBox(gsettingsManager));
-
-    return widget;
+        const styleManager = Adw.StyleManager.get_default();
+        const themeChangedId = styleManager.connect('notify::dark', updatePreview);
+        window.connect('close-request', () => {
+            styleManager.disconnect(themeChangedId);
+            return false;
+        });
+        updatePreview();
+    }
 }

@@ -1,21 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist gettext-domain="gnome-shell-extensions">
-	<schema
-	    id="org.gnome.shell.extensions.amneziawg"
-	    path="/org/gnome/shell/extensions/amneziawg/">
-
-            <key name="interface" type="s">
-                <default>"awg0"</default>
-                <summary>"Interface"</summary>
-	    </key>
-            <key name="icon-size" type="i">
-                <default>24</default>
-                <summary>"Icon Size"</summary>
-                <description>"The size of the toggle button icon in pixels"</description>
-            </key>
-            <key name="manual-theme" type="s">
-                <default>"dark"</default>
-                <summary>"Manual Theme Selection"</summary>
-            </key>
-    </schema>
+<schemalist>
+  <!-- GSettings declares types, defaults, and allowed values here. This schema
+       ID must match settings-schema in metadata.json. The path is a settings
+       namespace, not a filesystem directory. Recompile after editing this XML:
+       glib-compile-schemas schemas/ -->
+  <schema id="org.gnome.shell.extensions.amneziawg" path="/org/gnome/shell/extensions/amneziawg/">
+    <!-- type="s" means string. The application expands ~/ before file access;
+         GSettings itself stores the text literally and does not expand paths. -->
+    <key name="config-path" type="s">
+      <default>'~/.config/AmneziaVPN.ORG/AmneziaVPN.conf'</default>
+      <summary>AmneziaVPN configuration file</summary>
+    </key>
+    <!-- Persist the selected server across sessions without copying its secrets. -->
+    <key name="selected-server-id" type="s">
+      <default>''</default>
+      <summary>Selected server identity from the client configuration</summary>
+    </key>
+    <!-- Recovery is experimental and does not provide persistent leak protection. -->
+    <key name="experimental-resume-reconnect" type="b">
+      <default>false</default>
+      <summary>Experimental VPN reconnection after suspend</summary>
+      <description>Reconnect the previously active server after wake. This does not prevent IP or DNS leaks during reconnection.</description>
+    </key>
+    <!-- Empty string represents the Automatic option; other values are device
+         names. This is currently saved for future monitoring functionality. -->
+    <key name="network-interface" type="s">
+      <default>''</default>
+      <summary>Network interface to monitor; empty means automatic</summary>
+    </key>
+    <!-- Only the panel icon's color style is user-selectable. Theme brightness
+         is determined at runtime; it is not encoded in this preference. -->
+    <key name="icon-style" type="s">
+      <choices><choice value="default"/><choice value="color"/></choices>
+      <default>'default'</default>
+      <summary>Top panel icon type; brightness follows the Shell theme</summary>
+    </key>
+  </schema>
 </schemalist>
