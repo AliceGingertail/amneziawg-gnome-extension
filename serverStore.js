@@ -2,6 +2,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 import {parseServers} from './serverParser.js';
+import {parseTunnelSettings} from './tunnelConfig.js';
 
 // Owns file I/O and monitoring, but knows nothing about menu widgets. onUpdate
 // receives {servers, message}; only safe display data leaves this module.
@@ -13,12 +14,14 @@ export class ServerStore {
         this._timer = 0;
         this._monitor = null;
         this._cancellable = null;
+        this._records = new Map();
         this._pathChangedId = settings.connect('changed::config-path', () => this._open());
         this._open();
     }
 
     _open() {
         this._stopIO();
+        this._records.clear();
         const path = this._settings.get_string('config-path');
         const expanded = path.startsWith('~/')
             ? GLib.build_filenamev([GLib.get_home_dir(), path.slice(2)]) : path;
@@ -62,30 +65,25 @@ export class ServerStore {
         this._file.load_contents_async(cancellable, (file, result) => {
             try {
                 const [, bytes] = file.load_contents_finish(result);
+                
                 if (this._destroyed || cancellable.is_cancelled())
                     return;
-                const records = parseServers(new TextDecoder('utf-8', {fatal: true}).decode(bytes));
-                const used = new Set();
-                const servers = records.map(server => {
-                    // Prefer the client's stable storage ID. Older configurations
-                    // may lack one: hash non-secret connection identity fields.
-                    const identity = [server.hostName, server.port, server.userName, server.defaultContainer];
-                    const base = typeof server.storageServerId === 'string' && server.storageServerId
-                        ? server.storageServerId
-                        : GLib.compute_checksum_for_string(GLib.ChecksumType.SHA256, JSON.stringify(identity), -1);
-                    let id = base;
-                    let suffix = 1;
-                    while (used.has(id))
-                        id = `${base}:${suffix++}`;
-                    used.add(id);
+
+                const text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
+                const records = parseServers(text);
+                this._records = this._index(records);
+                const servers = [...this._records].map(([id, server]) => {
                     const name = typeof server.description === 'string' && server.description.trim()
                         ? server.description.trim() : 'Сервер без названия';
                     return {id, name};
                 });
-                this._onUpdate({servers, message: servers.length ? '' : 'Нет серверов'});
+
+                this._onUpdate({ servers, message: servers.length ? '' : 'Нет серверов' });
+                
             } catch (error) {
                 if (this._destroyed || cancellable.is_cancelled())
                     return;
+                this._records.clear();
                 const message = error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND)
                     ? 'Файл конфигурации не найден'
                     : error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.PERMISSION_DENIED)
@@ -107,11 +105,52 @@ export class ServerStore {
         this._timer = 0;
     }
 
+    getServer(id) {
+        return this._records.get(id) ?? null;
+    }
+
+    _index(servers) {
+        const result = new Map();
+        for (const server of servers) {
+            const identity = [server.hostName, server.port, server.userName, server.defaultContainer];
+            const base = typeof server.storageServerId === 'string' && server.storageServerId
+                ? server.storageServerId
+                : GLib.compute_checksum_for_string(GLib.ChecksumType.SHA256, JSON.stringify(identity), -1);
+            let id = base;
+            let suffix = 1;
+            while (result.has(id))
+                id = `${base}:${suffix++}`;
+            result.set(id, server);
+        }
+        return result;
+    }
+
+    getConnection(id, cancellable) {
+        const file = this._file;
+        if (!file || this._destroyed)
+            return Promise.reject(new Error('Файл конфигурации недоступен'));
+        return new Promise((resolve, reject) => {
+            file.load_contents_async(cancellable, (source, result) => {
+                try {
+                    const [, bytes] = source.load_contents_finish(result);
+                    if (this._destroyed || cancellable?.is_cancelled() || !this._file?.equal(file))
+                        throw new Error();
+                    const text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
+                    const records = this._index(parseServers(text));
+                    resolve({server: records.get(id) ?? null, settings: parseTunnelSettings(text)});
+                } catch {
+                    reject(new Error('Не удалось перечитать конфигурацию перед подключением'));
+                }
+            });
+        });
+    }
+
     destroy() {
         // Called before the menu disappears: callbacks must never touch dead UI.
         this._destroyed = true;
         this._settings.disconnect(this._pathChangedId);
         this._stopIO();
+        this._records.clear();
         this._onUpdate = null;
     }
 }

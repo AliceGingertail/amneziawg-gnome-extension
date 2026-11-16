@@ -27,69 +27,64 @@ import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/q
 import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {ServerStore} from './serverStore.js';
+import {VpnController} from './vpnController.js';
 
-const ExampleToggle = GObject.registerClass(
-class ExampleToggle extends QuickMenuToggle {
+function updateIconForTheme(actor, extension, style) {
+    const color = actor.get_theme_node().get_foreground_color();
+    const brightness = 0.2126 * color.red + 0.7152 * color.green + 0.0722 * color.blue;
+    const variant = brightness > 128 ? 'dark' : 'light';
+    const file = extension.dir.resolve_relative_path(`icons/${style}-${variant}.png`);
+    if (!actor.gicon?.file?.equal(file))
+        actor.gicon = new Gio.FileIcon({file});
+}
+
+const AmneziaToggle = GObject.registerClass(
+class AmneziaToggle extends QuickMenuToggle {
     constructor(extension) {
         super({
             title: _('Amnezia'),
-            gicon: new Gio.FileIcon({
-            file: extension.dir.resolve_relative_path(
-                'icons/default-dark.png'
-            ),
-            }),
-            toggleMode: true,
-        });    
-        // A CSS class can style multiple actors a name can target this actor.
+            gicon: new Gio.FileIcon({file: extension.dir.resolve_relative_path('icons/default-dark.png')}),
+            toggleMode: false,
+        });
         this.add_style_class_name('amneziawg-button');
         this.name = 'amneziawg-toggle';
 
-        const updateIcon = () => {
-            const color = this.get_theme_node().get_foreground_color();
-            // Weighted RGB brightness approximates how bright the text looks
-            // The files are named for the BACKGROUND: default-dark.png contains
-            // a pale logo for dark backgrounds, default-light.png a dark logo
-            const brightness = 0.2126 * color.red + 0.7152 * color.green + 0.0722 * color.blue;
-            const variant = brightness > 128 ? 'dark' : 'light';
-            const file = extension.dir.resolve_relative_path(`icons/default-${variant}.png`);
-
-            // changed icon avoids unnecessary work and repeated style updates.
-            if (!this.gicon?.file?.equal(file))
-                this.gicon = new Gio.FileIcon({file});
-        };
-        // Signals gnome events
+        const updateIcon = () => updateIconForTheme(this, extension, 'default');
         this.connect('style-changed', updateIcon);
 
-        // Constrain the server list so a long list does not fill the screen.
-        // These constructor options use the native widgets property names.
         const scrollView = new St.ScrollView({
             style: 'max-height: 240px;',
             hscrollbar_policy: St.PolicyType.NEVER,
             vscrollbar_policy: St.PolicyType.AUTOMATIC,
         });
 
-        // A menu section manages clickable items its actor is the visual part
-        // placed inside the scrolling container, then inside the toggles menu
         const serversSection = new PopupMenu.PopupMenuSection();
 
         scrollView.set_child(serversSection.actor);
         this.menu.box.add_child(scrollView);
 
-
         const settings = extension.getSettings();
         let currentServers = [];
+        let controller = null;
+        let vpnState = {available: false, connected: false, busy: false, message: 'Проверка VPN…'};
+        const statusItem = new PopupMenu.PopupMenuItem('Проверка VPN…', {reactive: false});
+        this.menu.addMenuItem(statusItem, 0);
         const updateSelection = () => {
             const selected = settings.get_string('selected-server-id');
-            this.subtitle = currentServers.find(server => server.id === selected)?.name ?? null;
-            // A dot marks the saved selection. Saving an ID instead of an index
-            // keeps the selection when the client changes the order of servers.
+            const selectedName = currentServers.find(server => server.id === selected)?.name;
+            this.checked = vpnState.connected;
+            this.subtitle = vpnState.message || (vpnState.connected
+                ? vpnState.activeServerName ?? 'VPN подключён' : selectedName ?? 'Выберите сервер');
+            statusItem.label.text = vpnState.message || (vpnState.connected
+                ? `Подключено: ${vpnState.activeServerName ?? 'сервер не определён'}` : 'VPN отключён');
             for (const item of serversSection._getMenuItems()) {
                 item.setOrnament(item._serverId === selected
                     ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.NONE);
             }
         };
         const store = new ServerStore(settings, ({servers, message}) => {
-            currentServers = servers;
+            if (message !== 'Загрузка серверов…')
+                currentServers = servers;
             serversSection.removeAll();
             if (message) {
                 serversSection.addMenuItem(new PopupMenu.PopupMenuItem(message, {reactive: false}));
@@ -101,91 +96,70 @@ class ExampleToggle extends QuickMenuToggle {
                     item._serverId = server.id;
                 }
             }
+
+            if (servers.length && !settings.get_string('selected-server-id'))
+                settings.set_string('selected-server-id', servers.at(-1).id);
+
+            controller?.setServers(currentServers);
             updateSelection();
         });
+        controller = new VpnController(settings, store, state => {
+            vpnState = state;
+            updateSelection();
+        });
+        updateSelection();
         const selectionChangedId = settings.connect('changed::selected-server-id', updateSelection);
-        // A manual reopen retries loading if the file was missing at startup.
         this.menu.connect('open-state-changed', (_menu, open) => {
             if (open)
                 store.reload();
         });
         this.connect('destroy', () => {
+            controller.destroy();
             store.destroy();
             settings.disconnect(selectionChangedId);
         });
 
-        // Keep preferences outside the scrolling list so they remain accessible
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addAction('Настройки', () => {
             Main.panel.statusArea.quickSettings.menu.close();
             extension.openPreferences();
         });
-            
-        this.connect('clicked', () => {
-            console.log('Состояние кнопки:', this.checked);
-        });
-        
-        this.connect('clicked', () => {
-            console.log('Клик! Включено:', this.checked);
 
-            if (this.checked) {
-                // TODO: request a real VPN connection here.
-            } else {
-                    // TODO: request a real VPN disconnection here.
-            }
-        });
+        this.connect('clicked', () => controller.toggle());
     }
 });
 
-const ExampleIndicator = GObject.registerClass(
-class ExampleIndicator extends SystemIndicator {
+const AmneziaIndicator = GObject.registerClass(
+class AmneziaIndicator extends SystemIndicator {
     constructor(extension) {
         super();
 
         this._indicator = this._addIndicator();
-        // getSettings loads the schema named by metadata.json. The preferences
         const settings = extension.getSettings();
 
-        // Set an icon before the actor receives its first style notification.
         this._indicator.gicon = new Gio.FileIcon({file: extension.dir.resolve_relative_path(
             `icons/${settings.get_string('icon-style')}-dark.png`)
         });
-        
-        // The panel and menu can have different background colors. Measure this
-        // icon own foreground rather than copying the menu button's icon
-        const updatePanelIcon = () => {
-            const style = settings.get_string('icon-style');
-            const type = style;
-            const color = this._indicator.get_theme_node().get_foreground_color();
-            const brightness = 0.2126 * color.red + 0.7152 * color.green + 0.0722 * color.blue;
-            const variant = brightness > 128 ? 'dark' : 'light';
-            const file = extension.dir.resolve_relative_path(`icons/${type}-${variant}.png`);
-            if (!this._indicator.gicon?.file?.equal(file))
-                this._indicator.gicon = new Gio.FileIcon({file});
-        };
 
-        // changed::icon-style listens to only this settings key. connect returns
-        // an ID needed to disconnect later: settings can outlive this actor.
+        const updatePanelIcon = () => updateIconForTheme(
+            this._indicator, extension, settings.get_string('icon-style'));
+
         const iconChangedId = settings.connect('changed::icon-style', updatePanelIcon);
         this._indicator.connect('style-changed', updatePanelIcon);
         this.connect('destroy', () => settings.disconnect(iconChangedId));
-        
-        const toggle = new ExampleToggle(extension);
-        // A one-way binding copies checked -> visible whenever checked changes.
-        // SYNC_CREATE also copies the current value immediately. Consequently,
-        // the panel icon is hidden while the demo toggle is off.
+
+        const toggle = new AmneziaToggle(extension);
         toggle.bind_property('checked',
             this._indicator, 'visible',
             GObject.BindingFlags.SYNC_CREATE);
-        
-        // Register the button as one of this indicator's Quick Settings items.
+
         this.quickSettingsItems.push(toggle);
     }
 });
 
-export default class QuickSettingsExampleExtension extends Extension {
+export default class AmneziaExtension extends Extension {
     enable() {
-        this._indicator = new ExampleIndicator(this);
+        this._indicator = new AmneziaIndicator(this);
         Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
     }
 

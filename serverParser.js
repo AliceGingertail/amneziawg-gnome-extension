@@ -1,5 +1,3 @@
-// Pure JavaScript: no Shell widgets or file access. Keeping parsing separate
-// lets us test the Qt storage format without running an entire desktop session.
 export function parseServers(text) {
     const match = text.match(/^\s*serversList\s*=(.*)$/m);
     if (!match)
